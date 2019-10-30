@@ -14,8 +14,14 @@ PE Binary Shellcode Injector - Automated code cave discovery, shellcode injectio
 #### Built-in basic bind shell (TCP 4444) with XOR encoder
 ```./frampton.py -f FILENAME.exe -e```
 
+#### Built-in basic bind shell (TCP 4444) with multiple XOR encoder
+```./frampton.py -f FILENAME.exe -e -m 4```
+
 #### Custom Shellcode Injector 
 ```./frampton.py -f FILENAME.exe -s "\xSH\xEL\xCO\xDE\xHE\xRE```
 
 #### Custom Shellcode Injector with XOR encoder
 ```./frampton.py -f FILENAME.exe -s "\xSH\xEL\xCO\xDE\xHE\xRE -e```
+
+#### Custom Shellcode Injector with multiple XOR encoder
+```./frampton.py -f FILENAME.exe -s "\xSH\xEL\xCO\xDE\xHE\xRE -e -m 4```
