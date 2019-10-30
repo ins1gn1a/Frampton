@@ -5,6 +5,9 @@ PE Binary Shellcode Injector - Automated code cave discovery, shellcode injectio
 `pip3 install -r requirements.txt`
 
 ## Usage
+#### Information Only (no injection)
+```./frampton.py -f FILENAME.exe -i```
+
 #### Built-in basic bind shell (TCP 4444) 
 ```./frampton.py -f FILENAME.exe```
 
@@ -13,3 +16,6 @@ PE Binary Shellcode Injector - Automated code cave discovery, shellcode injectio
 
 #### Custom Shellcode Injector 
 ```./frampton.py -f FILENAME.exe -s "\xSH\xEL\xCO\xDE\xHE\xRE```
+
+#### Custom Shellcode Injector with XOR encoder
+```./frampton.py -f FILENAME.exe -s "\xSH\xEL\xCO\xDE\xHE\xRE -e```
