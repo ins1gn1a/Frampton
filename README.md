@@ -5,6 +5,29 @@ PE Binary Shellcode Injector - Automated code cave discovery, shellcode injectio
 `pip3 install -r requirements.txt`
 
 ## Usage
+```
+usage: frampton.py [-h] --file FILE [--shellcode SHELLCODE] [--output OUTFILE]
+                   [--info] [--encoder] [--multi-encoder ENCODERMULTIPLE]
+
+Frampton PE file Injector
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --file FILE, -f FILE  Filename or path to base template PE file
+  --shellcode SHELLCODE, -s SHELLCODE
+                        Enter custom shellcode - architecture specific x86/x64
+                        (optional) - Default: Windows x86 TCP 4444 Bind Shell
+  --output OUTFILE, -o OUTFILE
+                        Filename or path to new destination PE file (optional)
+  --info, -i            Only display code cave information - does not inject
+                        or modify (optional)
+  --encoder, -e         Use built-in shellcode XOR encoder - x86 only
+                        (optional)
+  --multi-encoder ENCODERMULTIPLE, -m ENCODERMULTIPLE
+                        Specify the number of auto-generated keys to encode
+                        shellcode (optional)
+```
+
 #### Information Only (no injection)
 ```./frampton.py -f FILENAME.exe -i```
 
