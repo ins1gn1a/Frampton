@@ -358,10 +358,14 @@ if args.info is False:
 
     if x64:
         # Add return address for original program execution
-        shellcode += (b"\x48\xb8" + returnAddress + b"\xFF\xD0")
+        # mov rax, addr
+        # jmp rax
+        shellcode += (b"\x48\xb8" + returnAddress + b"\xFF\xe0")
 
     else:
         # Add return address for original program execution
+        # mov eax, addr
+        # call eax
         shellcode += (b"\xB8" + returnAddress + b"\xFF\xD0")
 
     # Prepend 4 NOPS to shellcode for padding
