@@ -31,6 +31,9 @@ optional arguments:
 #### Information Only (no injection)
 ```./frampton.py -f FILENAME.exe -i```
 
+![Frampton Example](https://github.com/ins1gn1a/Frampton/blob/master/example2.png?raw=true)
+
+
 #### Built-in basic bind shell (TCP 4444) 
 ```./frampton.py -f FILENAME.exe```
 
