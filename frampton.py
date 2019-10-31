@@ -294,14 +294,14 @@ print(PrintBlue("[i]") + " Image Base:\t\t\t" + '0x{:08x}'.format(image_base))
 entrypoint = '0x{:08x}'.format(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 print(PrintBlue("[i]") + " Entry Point:\t\t" + entrypoint)
 
-minCave = 0
+minCave = (4 + len(shellcode)) + 10
 # Find Code Cave
 if args.encoder:
-    minCave = (4 + len(shellcode)) + 24
-    if args.encodermultiple:
-        minCave = minCave + ((args.encodermultiple - 1) * 3)
+    minCave += 16
+    if args.encodermultiple > 1:
+        minCave = minCave + ((args.encodermultiple -1 ) * 3)
 else:
-    minCave = minCave + 20
+    minCave = minCave
 
 try:
     newEntryPoint, newRawOffset = FindCave()
@@ -442,6 +442,7 @@ if args.info is False:
     shellcode = b"\x90\x90\x90\x90" + shellcode
 
     # Injects Shellcode
+    print (len(shellcode))
     pe.set_bytes_at_offset(newRawOffset, shellcode)
 
     print (PrintGreen("\n[+]") + " New PE Saved:\t\t" + newFile)
