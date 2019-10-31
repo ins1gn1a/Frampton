@@ -129,24 +129,39 @@ def FindCave():
                     count += 1
                 else:
 
-                    if count > minCave:
-                        caveFound = True
-                        raw_addr = section.PointerToRawData + position - count - 1
-                        vir_addr = image_base_hex + section.VirtualAddress + position - count - 1
 
-                        print(PrintGreen("[+]") + " Code Cave:")
-                        print("\tSection: \t\t%s" % section.Name.decode())
-                        print ("\tSize: \t\t\t%d bytes" % count)
-                        print ("\tRaw: \t\t\t0x%08X" % raw_addr)
-                        print ("\tVirtual: \t\t0x%08X" % vir_addr)
-                        print("\tCharacteristics: \t" + hex(section.Characteristics))
+                    if args.info is False:
+                        if count > minCave:
+                            caveFound = True
+                            raw_addr = section.PointerToRawData + position - count - 1
+                            vir_addr = image_base_hex + section.VirtualAddress + position - count - 1
 
-                        if args.info is False:
-                            # Set section header characteristics ## RWX
-                            section.Characteristics = 0xE0000040
-                            print("\tNew Characteristics: \t" + "0xE0000040\n")
+                            print(PrintGreen("[+]") + " Code Cave:")
+                            print("\tSection: \t\t%s" % section.Name.decode())
+                            print ("\tSize: \t\t\t%d bytes" % count)
+                            print ("\tRaw: \t\t\t0x%08X" % raw_addr)
+                            print ("\tVirtual: \t\t0x%08X" % vir_addr)
+                            print("\tCharacteristics: \t" + hex(section.Characteristics))
 
-                        return vir_addr, raw_addr
+                            if args.info is False:
+                                # Set section header characteristics ## RWX
+                                section.Characteristics = 0xE0000040
+                                print("\tNew Characteristics: \t" + "0xE0000040\n")
+
+                            return vir_addr, raw_addr
+
+                    else:
+                        # Min 64 bytes for check
+                        if count > 64:
+                            raw_addr = section.PointerToRawData + position - count - 1
+                            vir_addr = image_base_hex + section.VirtualAddress + position - count - 1
+
+                            print(PrintGreen("[+]") + " Code Cave:")
+                            print("\tSection: \t\t%s" % section.Name.decode())
+                            print("\tSize: \t\t\t%d bytes" % count)
+                            print("\tRaw: \t\t\t0x%08X" % raw_addr)
+                            print("\tVirtual: \t\t0x%08X" % vir_addr)
+                            print("\tCharacteristics: \t" + hex(section.Characteristics))
 
                     count = 0
         sectionCount += 1
@@ -279,6 +294,7 @@ print(PrintBlue("[i]") + " Image Base:\t\t\t" + '0x{:08x}'.format(image_base))
 entrypoint = '0x{:08x}'.format(pe.OPTIONAL_HEADER.AddressOfEntryPoint)
 print(PrintBlue("[i]") + " Entry Point:\t\t" + entrypoint)
 
+minCave = 0
 # Find Code Cave
 if args.encoder:
     minCave = (4 + len(shellcode)) + 24
