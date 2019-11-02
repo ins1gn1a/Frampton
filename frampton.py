@@ -442,7 +442,7 @@ if args.info is False:
     shellcode = b"\x90\x90\x90\x90" + shellcode
 
     # Injects Shellcode
-    print (len(shellcode))
+    print (PrintBlue("[i] ") + "Final Shellcode Size:\t" + str(len(shellcode)))
     pe.set_bytes_at_offset(newRawOffset, shellcode)
 
     print (PrintGreen("\n[+]") + " New PE Saved:\t\t" + newFile)
