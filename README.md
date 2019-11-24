@@ -3,7 +3,7 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/ins1gn1a/Frampton.svg)](https://GitHub.com/ins1gn1a/Frampton/graphs/contributors/)
 [![GitHub issues](https://img.shields.io/github/issues/ins1gn1a/Frampton)](https://github.com/ins1gn1a/Frampton/issues)
 [![GitHub stars](https://img.shields.io/github/stars/ins1gn1a/Frampton)](https://github.com/ins1gn1a/Frampton/stargazers)
-[![GitHub license](https://img.shields.io/github/license/ins1gn1a/Frampton)](https://github.com/ins1gn1a/Frampton/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/ins1gn1a/frampton)](https://github.com/ins1gn1a/Frampton/blob/master/LICENSE)
 
 PE Binary Shellcode Injector - Automated code cave discovery, shellcode injection, ASLR bypass
 
